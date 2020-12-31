@@ -1,3 +1,102 @@
+server:
+  port: 9100
+Spring:
+  application:
+    name: lagou-service-order
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/springcloudwork?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+    username: root
+    password: 123456
+  cloud:
+    config:
+      name: application
+      profile: dev
+      label: master
+      uri: http://localhost:9400
+  rabbitmq:
+    host: 192.168.80.128
+
+mybatis-plus:
+  configuration:
+    #开启驼峰命名规则
+    map-underscore-to-camel-case: true
+  #配置MyBatis的xml配置文件路径
+  mapper-locations: classpath:order/mapper/*.xml
+  #配置XML映射文件中指定的实体类别名路径
+  type-aliases-package: com.lagou.common.pojo
+
+eureka:
+  client:
+    serviceUrl: # eureka server的路径
+      defaultZone: http://LagouCloudEureKaServerA:9300/eureka,http://LagouCloudEureKaServerB:9301/eureka
+  instance:
+    #使用ip注册，否则会使用主机名注册了（此处考虑到对老版本的兼容，新版本经过实验都是ip）
+    prefer-ip-address: true
+    #自定义实例显示格式，加上版本号，便于多版本管理，注意是ip-address，早期版本是ipAddress
+    instance-id: ${spring.cloud.client.ip-address}:${spring.application.name}:${server.port}:@project.version@
+
+# 配置熔断策略：
+hystrix:
+  command:
+    default:
+      circuitBreaker:
+        # 强制打开熔断器，如果该属性设置为true，强制断路器进入打开状态，将会拒绝所有的请求。 默认false关闭的
+        forceOpen: false
+        # 触发熔断错误比例阈值，默认值50%
+        errorThresholdPercentage: 50
+        # 熔断后休眠时长，默认值5秒
+        sleepWindowInMilliseconds: 3000
+        # 熔断触发最小请求次数，默认值是20
+        requestVolumeThreshold: 20
+      execution:
+        isolation:
+          thread:
+            # 超时时间5秒触发熔断
+            timeoutInMilliseconds: 5000
 
 
-slogan：中国梦！
+
+# springboot中暴露接口
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  # 暴露健康接口的细节
+  endpoint:
+    health:
+      show-details: always
+
+
+#针对的被调用方微服务名称,不加就是全局生效
+lagou-service-goods:
+  ribbon:
+    #请求连接超时时间
+    #ConnectTimeout: 2000
+    #请求处理超时时间
+    #ReadTimeout: 5000
+    #对所有操作都进行重试
+    OkToRetryOnAllOperations: true
+    ####根据如上配置，当访问到故障请求的时候，它会再尝试访问一次当前实例（次数由MaxAutoRetries配置），
+    ####如果不行，就换一个实例进行访问，如果还不行，再换一次实例访问（更换次数由MaxAutoRetriesNextServer配置），
+    ####如果依然不行，返回失败信息。
+    MaxAutoRetries: 0 #对当前选中实例重试次数，不包括第一次调用
+    MaxAutoRetriesNextServer: 0 #切换实例的重试次数
+    NFLoadBalancerRuleClassName: com.netflix.loadbalancer.RoundRobinRule #轮询策略
+
+
+#开启Feign对熔断器支持
+feign:
+  hystrix:
+    enabled: true
+  #开启请求和响应的压缩
+  compression:
+    request:
+      enabled: true
+      mime-types: text/xml,application/xml,application/json
+      min-request-size: 2048
+    response:
+      enabled: true
+
+slogan: 中国梦！
